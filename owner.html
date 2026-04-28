@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Zerodot Salon — Owner Dashboard for managing appointments, hours, and settings.">
+    <meta name="description" content="Zerodot Salon — Owner Dashboard for managing appointments, staff, payments, and settings.">
     <title>Zerodot — Owner Dashboard</title>
     <link rel="stylesheet" href="css/styles.css">
     <link rel="icon" href="logo.jpeg" type="image/jpeg">
@@ -54,17 +54,19 @@
                     <div class="stat-number" id="stat-completed">0</div>
                     <div class="stat-label">Completed</div>
                 </div>
-                <div class="stat-card stat-cancelled">
-                    <div class="stat-number" id="stat-cancelled">0</div>
-                    <div class="stat-label">Cancelled</div>
+                <div class="stat-card stat-revenue">
+                    <div class="stat-number" id="stat-revenue">₹0</div>
+                    <div class="stat-label">Revenue</div>
                 </div>
             </div>
 
-            <!-- Tabs -->
+            <!-- 5 Tabs -->
             <div class="owner-tabs" id="owner-tabs">
-                <button class="owner-tab active" data-tab="appointments">Appointments</button>
-                <button class="owner-tab" data-tab="calendar">Calendar</button>
-                <button class="owner-tab" data-tab="settings">Settings</button>
+                <button class="owner-tab active" data-tab="appointments">📋 Bookings</button>
+                <button class="owner-tab" data-tab="staff">👥 Staff</button>
+                <button class="owner-tab" data-tab="payments">💰 Payments</button>
+                <button class="owner-tab" data-tab="reports">📊 Reports</button>
+                <button class="owner-tab" data-tab="settings">⚙️ Settings</button>
             </div>
 
             <!-- Tab: Appointments -->
@@ -75,14 +77,90 @@
                 <div id="appointments-list"></div>
             </div>
 
-            <!-- Tab: Calendar -->
-            <div class="tab-panel" id="tab-calendar">
-                <div class="section-title">Next 7 Days — Appointment Counts</div>
-                <div class="date-strip" id="owner-date-strip" style="margin-bottom:32px;"></div>
+            <!-- Tab: Staff -->
+            <div class="tab-panel" id="tab-staff">
+                <div class="tab-panel-header">
+                    <div class="section-title" style="margin-bottom:0;">Your Team</div>
+                    <button class="btn btn-primary btn-sm" id="btn-add-worker">+ Add Worker</button>
+                </div>
+                <div id="workers-list"></div>
 
-                <div class="section-title">Manage Leave Days</div>
-                <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:16px;">Tap a day to toggle it as a leave day. Existing bookings on that day will NOT be auto-cancelled — manage them manually.</p>
-                <div class="leave-calendar" id="leave-calendar"></div>
+                <!-- Add/Edit Worker Form (hidden) -->
+                <div class="worker-form-card" id="worker-form" style="display:none;">
+                    <div class="settings-section-title" id="worker-form-title">Add New Worker</div>
+                    <div class="form-group">
+                        <label class="form-label">Name</label>
+                        <input type="text" class="form-input" id="worker-name" placeholder="Worker's full name">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Phone</label>
+                        <input type="tel" class="form-input" id="worker-phone" placeholder="10-digit number" maxlength="10">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Gender</label>
+                        <div class="gender-toggle" id="worker-gender-toggle">
+                            <div class="gender-option active" data-gender="male">
+                                <div class="gender-icon">👨</div>
+                                <div class="gender-label">Male</div>
+                            </div>
+                            <div class="gender-option" data-gender="female">
+                                <div class="gender-icon">👩</div>
+                                <div class="gender-label">Female</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Services They Can Do</label>
+                        <div class="specialization-grid" id="specialization-grid"></div>
+                    </div>
+                    <div class="form-actions-row">
+                        <button class="btn btn-primary btn-sm" id="btn-save-worker">Save Worker</button>
+                        <button class="btn btn-secondary btn-sm" id="btn-cancel-worker">Cancel</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Payments -->
+            <div class="tab-panel" id="tab-payments">
+                <div class="payment-stats-row" id="payment-stats-row">
+                    <div class="payment-stat-card">
+                        <div class="payment-stat-label">Today</div>
+                        <div class="payment-stat-value" id="pay-today">₹0</div>
+                    </div>
+                    <div class="payment-stat-card">
+                        <div class="payment-stat-label">This Week</div>
+                        <div class="payment-stat-value" id="pay-week">₹0</div>
+                    </div>
+                    <div class="payment-stat-card">
+                        <div class="payment-stat-label">This Month</div>
+                        <div class="payment-stat-value" id="pay-month">₹0</div>
+                    </div>
+                </div>
+
+                <div class="section-title">Client History Search</div>
+                <div class="phone-search" style="margin-bottom:20px;">
+                    <input type="tel" class="form-input" id="client-search-phone" placeholder="Search client by phone" maxlength="10">
+                    <button class="btn btn-primary btn-sm" id="btn-client-search">Search</button>
+                </div>
+                <div id="client-history-result"></div>
+
+                <div class="section-title">Pending Payments</div>
+                <div id="pending-payments-list"></div>
+            </div>
+
+            <!-- Tab: Reports -->
+            <div class="tab-panel" id="tab-reports">
+                <div class="section-title">Revenue — Last 7 Days</div>
+                <div class="chart-container" id="revenue-chart"></div>
+
+                <div class="section-title">Top Services</div>
+                <div id="top-services-list"></div>
+
+                <div class="section-title">Worker Performance</div>
+                <div id="worker-performance-list"></div>
+
+                <div class="section-title">Client Stats</div>
+                <div class="client-stats-row" id="client-stats-row"></div>
             </div>
 
             <!-- Tab: Settings -->
@@ -102,6 +180,48 @@
                     </div>
                 </div>
 
+                <!-- Calendar / Leave Days -->
+                <div class="settings-section">
+                    <div class="settings-section-title">Manage Leave Days</div>
+                    <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:16px;">Tap a day to toggle it as a leave day.</p>
+                    <div class="date-strip" id="owner-date-strip" style="margin-bottom:16px;"></div>
+                    <div class="leave-calendar" id="leave-calendar"></div>
+                </div>
+
+                <!-- Service Manager -->
+                <div class="settings-section">
+                    <div class="settings-section-title">🛠️ Service Manager</div>
+                    <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:16px;">Add, edit, or remove services. Changes reflect immediately for clients.</p>
+
+                    <div class="service-manager-tabs">
+                        <button class="svc-mgr-tab active" data-gender="male">👨 Male Services</button>
+                        <button class="svc-mgr-tab" data-gender="female">👩 Female Services</button>
+                    </div>
+                    <div id="service-manager-list"></div>
+
+                    <!-- Add Service Form -->
+                    <div class="add-service-form" id="add-service-form" style="display:none;">
+                        <div class="form-group">
+                            <label class="form-label">Service Name</label>
+                            <input type="text" class="form-input" id="new-svc-name" placeholder="e.g., Keratin Treatment">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Icon (Emoji)</label>
+                            <input type="text" class="form-input" id="new-svc-icon" placeholder="✂️" value="✂️" style="width:80px;">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Price (₹)</label>
+                            <input type="number" class="form-input" id="new-svc-price" placeholder="500" min="0" style="width:120px;">
+                        </div>
+                        <div class="form-actions-row">
+                            <button class="btn btn-primary btn-sm" id="btn-save-new-svc">Add Service</button>
+                            <button class="btn btn-secondary btn-sm" id="btn-cancel-new-svc">Cancel</button>
+                        </div>
+                    </div>
+                    <button class="btn btn-secondary btn-sm" id="btn-show-add-svc" style="margin-top:12px;">+ Add New Service</button>
+                </div>
+
+                <!-- Change PIN -->
                 <div class="settings-section">
                     <div class="settings-section-title">Change PIN</div>
                     <div class="settings-row">
@@ -117,6 +237,7 @@
                     </div>
                 </div>
 
+                <!-- Data Management -->
                 <div class="settings-section">
                     <div class="settings-section-title">Data Management</div>
                     <div style="display:flex;gap:10px;flex-wrap:wrap;">
@@ -124,6 +245,19 @@
                         <button class="btn btn-secondary btn-sm" id="btn-import">📤 Import Data</button>
                         <input type="file" id="import-file" accept=".json" style="display:none;">
                     </div>
+                </div>
+
+                <!-- Firebase Status -->
+                <div class="settings-section">
+                    <div class="settings-section-title">☁️ Cloud Sync (Firebase)</div>
+                    <div class="firebase-status" id="firebase-status">
+                        <span id="fb-status-dot" class="fb-dot offline"></span>
+                        <span id="fb-status-text">Checking...</span>
+                    </div>
+                    <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;">
+                        <button class="btn btn-secondary btn-sm" id="btn-migrate-fb">🔄 Migrate Data to Cloud</button>
+                    </div>
+                    <p style="font-size:0.75rem;color:var(--text-muted);margin-top:10px;">Data syncs automatically when connected. Use Migrate to push all local data to cloud.</p>
                 </div>
             </div>
 
@@ -139,6 +273,7 @@
         <div class="modal-box">
             <div class="modal-title" id="modal-title">Confirm</div>
             <div class="modal-message" id="modal-message">Are you sure?</div>
+            <div class="modal-content" id="modal-content"></div>
             <div class="modal-actions">
                 <button class="btn btn-secondary" id="modal-no">Cancel</button>
                 <button class="btn btn-danger" id="modal-yes">Confirm</button>
@@ -146,10 +281,51 @@
         </div>
     </div>
 
+    <!-- Payment Modal -->
+    <div class="modal-overlay" id="payment-modal">
+        <div class="modal-box">
+            <div class="modal-title">Collect Payment</div>
+            <div class="modal-message" id="payment-modal-info"></div>
+            <div class="payment-form">
+                <div class="form-group">
+                    <label class="form-label">Amount (₹)</label>
+                    <input type="number" class="form-input" id="payment-amount" min="0">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Payment Method</label>
+                    <div class="payment-method-toggle" id="payment-method-toggle">
+                        <div class="payment-method-option active" data-method="cash">
+                            <span class="method-icon">💵</span>
+                            <span class="method-label">Cash</span>
+                        </div>
+                        <div class="payment-method-option" data-method="upi">
+                            <span class="method-icon">📱</span>
+                            <span class="method-label">UPI</span>
+                        </div>
+                        <div class="payment-method-option" data-method="card">
+                            <span class="method-icon">💳</span>
+                            <span class="method-label">Card</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" id="payment-cancel">Cancel</button>
+                <button class="btn btn-success" id="payment-confirm">✓ Mark Paid</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast -->
     <div class="toast" id="toast"></div>
 
+    <!-- Firebase SDK (compat CDN) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
+    <script src="js/firebase-config.js"></script>
     <script src="js/data.js"></script>
+    <script src="js/owner-tabs.js"></script>
     <script src="js/owner.js"></script>
 </body>
 </html>

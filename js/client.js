@@ -1,5 +1,6 @@
 // ========================================
 // Zerodot Salon — Client Booking Logic
+// Multi-service, Worker Selection, Prices
 // ========================================
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -7,7 +8,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedDate = null;
     let selectedSlot = null;
     let selectedGender = null;
-    let selectedService = null;
+    let selectedServices = []; // Array of service objects
+    let selectedWorkerId = null;
     let cancelTargetId = null;
 
     // Refs
@@ -20,6 +22,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const formSlotInfo = document.getElementById('form-slot-info');
     const genderToggle = document.getElementById('gender-toggle');
     const serviceGrid = document.getElementById('service-grid');
+    const serviceSummary = document.getElementById('service-summary');
+    const serviceSummaryList = document.getElementById('service-summary-list');
+    const serviceSummaryTotal = document.getElementById('service-summary-total');
+    const serviceCountBadge = document.getElementById('service-count-badge');
+    const workerGroup = document.getElementById('worker-group');
+    const workerSelector = document.getElementById('worker-selector');
     const mainContent = document.getElementById('main-content');
     const confirmationScreen = document.getElementById('confirmation-screen');
     const checkBookingSection = document.getElementById('check-booking-section');
@@ -77,7 +85,6 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedDate = dateStr;
         selectedSlot = null;
 
-        // Update active card
         document.querySelectorAll('.date-card').forEach(c => c.classList.remove('active'));
         const active = document.querySelector(`.date-card[data-date="${dateStr}"]`);
         if (active) active.classList.add('active');
@@ -113,7 +120,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Reset the container to grid
         slotsContainer.innerHTML = '<div class="slots-grid animate-stagger" id="slots-grid"></div>';
         const grid = document.getElementById('slots-grid');
 
@@ -121,11 +127,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const card = document.createElement('div');
             card.className = 'slot-card' + (slot.isBooked ? ' booked' : '');
             card.dataset.time = slot.time;
-            
+
             const startTime = slot.time.split(' - ')[0];
+            const spotsLeft = slot.capacity - slot.bookingsCount;
+            const spotsLabel = slot.isBooked ? 'Full' :
+                (slot.capacity > 1 ? `${spotsLeft} spot${spotsLeft > 1 ? 's' : ''}` : 'Available');
+
             card.innerHTML = `
                 <div class="slot-time">${startTime}</div>
-                <div class="slot-status">${slot.isBooked ? 'Booked' : 'Available'}</div>
+                <div class="slot-status">${spotsLabel}</div>
             `;
 
             if (!slot.isBooked) {
@@ -138,18 +148,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function selectSlot(timeStr, cardEl) {
         selectedSlot = timeStr;
-
-        // Update selected state
         document.querySelectorAll('.slot-card').forEach(c => c.classList.remove('selected'));
         cardEl.classList.add('selected');
-
-        // Show booking form
         showBookingForm();
     }
 
     // ——— Booking Form ———
     function showBookingForm() {
-        // Update slot info
         const dayInfo = SalonData.getNextDays(3).find(d => d.date === selectedDate);
         formSlotInfo.textContent = `📅 ${dayInfo.dayName}, ${dayInfo.dayNum} ${dayInfo.monthName} · ${selectedSlot}`;
 
@@ -158,11 +163,14 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('input-phone').value = '';
         document.getElementById('input-notes').value = '';
         selectedGender = null;
-        selectedService = null;
+        selectedServices = [];
+        selectedWorkerId = null;
         document.querySelectorAll('.gender-option').forEach(o => o.classList.remove('active'));
         serviceGrid.innerHTML = '';
+        serviceSummary.style.display = 'none';
+        serviceCountBadge.style.display = 'none';
+        workerGroup.style.display = 'none';
 
-        // Show
         formOverlay.classList.add('visible');
         formWrapper.classList.add('visible');
         document.body.style.overflow = 'hidden';
@@ -174,25 +182,106 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.style.overflow = '';
     }
 
+    // ——— Services (Multi-select with prices) ———
     function renderServices(gender) {
-        const services = SalonData.SERVICES[gender] || [];
+        const services = SalonData.getServices()[gender] || [];
         serviceGrid.innerHTML = '';
-        selectedService = null;
+        selectedServices = [];
+        updateServiceSummary();
 
         services.forEach(svc => {
             const card = document.createElement('div');
             card.className = 'service-card';
             card.dataset.serviceId = svc.id;
             card.innerHTML = `
+                <div class="service-check-mark">✓</div>
                 <div class="service-icon">${svc.icon}</div>
                 <div class="service-name">${svc.name}</div>
+                <div class="service-price">₹${svc.price}</div>
+            `;
+            card.addEventListener('click', () => toggleService(svc, card));
+            serviceGrid.appendChild(card);
+        });
+    }
+
+    function toggleService(svc, cardEl) {
+        const idx = selectedServices.findIndex(s => s.id === svc.id);
+        if (idx > -1) {
+            // Remove
+            selectedServices.splice(idx, 1);
+            cardEl.classList.remove('active');
+        } else {
+            // Add
+            selectedServices.push({ ...svc });
+            cardEl.classList.add('active');
+        }
+        updateServiceSummary();
+        updateWorkerSelector();
+    }
+
+    function updateServiceSummary() {
+        if (selectedServices.length === 0) {
+            serviceSummary.style.display = 'none';
+            serviceCountBadge.style.display = 'none';
+            return;
+        }
+
+        serviceCountBadge.style.display = 'inline';
+        serviceCountBadge.textContent = `${selectedServices.length} selected`;
+
+        const total = selectedServices.reduce((sum, s) => sum + (s.price || 0), 0);
+
+        serviceSummaryList.innerHTML = selectedServices
+            .map(s => `<span class="summary-chip">${s.icon} ${s.name} <span class="chip-price">₹${s.price}</span></span>`)
+            .join('');
+
+        serviceSummaryTotal.innerHTML = `Total: <strong>₹${total}</strong>`;
+        serviceSummary.style.display = 'block';
+    }
+
+    // ——— Worker Selector ———
+    function updateWorkerSelector() {
+        if (!selectedDate || !selectedSlot) return;
+
+        const serviceIds = selectedServices.map(s => s.id);
+        const available = SalonData.getAvailableWorkers(selectedDate, selectedSlot, serviceIds);
+
+        if (available.length === 0) {
+            workerGroup.style.display = 'none';
+            selectedWorkerId = null;
+            return;
+        }
+
+        workerGroup.style.display = 'block';
+        workerSelector.innerHTML = '';
+
+        // "Any available" option
+        const anyCard = document.createElement('div');
+        anyCard.className = 'worker-card' + (!selectedWorkerId ? ' active' : '');
+        anyCard.innerHTML = `
+            <div class="worker-avatar">🎲</div>
+            <div class="worker-name">Anyone Available</div>
+        `;
+        anyCard.addEventListener('click', () => {
+            selectedWorkerId = null;
+            document.querySelectorAll('.worker-card').forEach(c => c.classList.remove('active'));
+            anyCard.classList.add('active');
+        });
+        workerSelector.appendChild(anyCard);
+
+        available.forEach(w => {
+            const card = document.createElement('div');
+            card.className = 'worker-card' + (selectedWorkerId === w.id ? ' active' : '');
+            card.innerHTML = `
+                <div class="worker-avatar">${w.avatar}</div>
+                <div class="worker-name">${w.name}</div>
             `;
             card.addEventListener('click', () => {
-                selectedService = svc;
-                document.querySelectorAll('.service-card').forEach(c => c.classList.remove('active'));
+                selectedWorkerId = w.id;
+                document.querySelectorAll('.worker-card').forEach(c => c.classList.remove('active'));
                 card.classList.add('active');
             });
-            serviceGrid.appendChild(card);
+            workerSelector.appendChild(card);
         });
     }
 
@@ -202,20 +291,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const phone = document.getElementById('input-phone').value.trim();
         const notes = document.getElementById('input-notes').value.trim();
 
-        // Validation
         if (!name) return showToast('Please enter your name', 'error');
         if (!phone || phone.length < 10 || !/^\d{10}$/.test(phone)) return showToast('Enter a valid 10-digit phone number', 'error');
         if (!selectedGender) return showToast('Please select gender', 'error');
-        if (!selectedService) return showToast('Please select a service', 'error');
+        if (selectedServices.length === 0) return showToast('Please select at least one service', 'error');
 
         const result = SalonData.bookSlot({
             name,
             phone,
             gender: selectedGender,
-            service: selectedService.name,
+            services: selectedServices.map(s => ({ id: s.id, name: s.name, price: s.price, icon: s.icon })),
             date: selectedDate,
             timeSlot: selectedSlot,
             notes,
+            workerId: selectedWorkerId || '',
         });
 
         if (!result.success) {
@@ -223,7 +312,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Success!
         hideBookingForm();
         showConfirmation(result.appointment);
     }
@@ -235,6 +323,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const dayInfo = SalonData.getNextDays(3).find(d => d.date === appt.date);
         const dateLabel = dayInfo ? `${dayInfo.dayName}, ${dayInfo.dayNum} ${dayInfo.monthName}` : appt.date;
+
+        const serviceNames = (appt.services || []).map(s => `${s.icon || '✂️'} ${s.name}`).join(', ');
+        const total = appt.totalAmount || 0;
 
         confirmationScreen.innerHTML = `
             <div class="confirmation-screen">
@@ -255,9 +346,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         <span class="value">${appt.timeSlot}</span>
                     </div>
                     <div class="confirmation-row">
-                        <span class="label">Service</span>
-                        <span class="value">${appt.service}</span>
+                        <span class="label">Services</span>
+                        <span class="value">${serviceNames}</span>
                     </div>
+                    <div class="confirmation-row">
+                        <span class="label">Total</span>
+                        <span class="value confirmation-total">₹${total}</span>
+                    </div>
+                    ${appt.workerName ? `<div class="confirmation-row"><span class="label">Stylist</span><span class="value">${appt.workerName}</span></div>` : ''}
                     <div class="confirmation-row">
                         <span class="label">Phone</span>
                         <span class="value">${appt.phone}</span>
@@ -279,7 +375,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function toggleCheckBooking() {
         const isVisible = checkBookingSection.style.display !== 'none';
         checkBookingSection.style.display = isVisible ? 'none' : 'block';
-        
+
         if (!isVisible) {
             document.getElementById('search-phone').value = '';
             bookingsList.innerHTML = '';
@@ -306,18 +402,22 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Sort by date desc
         bookings.sort((a, b) => new Date(b.date) - new Date(a.date));
         bookingsList.innerHTML = '';
 
         bookings.forEach(b => {
             const statusClass = b.status === 'upcoming' ? 'badge-upcoming' : b.status === 'completed' ? 'badge-completed' : 'badge-cancelled';
+            // Handle both old single-service and new multi-service format
+            const serviceLabel = b.services
+                ? b.services.map(s => s.name).join(', ')
+                : (b.service || 'Service');
+
             const card = document.createElement('div');
             card.className = 'booking-card';
             card.innerHTML = `
                 <div class="booking-card-header">
                     <div>
-                        <div class="booking-card-title">${b.service}</div>
+                        <div class="booking-card-title">${serviceLabel}</div>
                         <div class="booking-card-id">${b.id}</div>
                     </div>
                     <span class="booking-status-badge ${statusClass}">${b.status}</span>
@@ -325,6 +425,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="booking-card-details">
                     <span class="booking-card-detail">📅 ${b.date}</span>
                     <span class="booking-card-detail">⏰ ${b.timeSlot}</span>
+                    ${b.totalAmount ? `<span class="booking-card-detail">💰 ₹${b.totalAmount}</span>` : ''}
+                    ${b.workerName ? `<span class="booking-card-detail">💇 ${b.workerName}</span>` : ''}
                 </div>
                 ${b.status === 'upcoming' ? `
                     <div class="booking-card-actions">
@@ -335,7 +437,6 @@ document.addEventListener('DOMContentLoaded', () => {
             bookingsList.appendChild(card);
         });
 
-        // Bind cancel buttons
         document.querySelectorAll('.cancel-booking-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 cancelTargetId = btn.dataset.id;
@@ -352,8 +453,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (result.success) {
             showToast('Booking cancelled successfully', 'success');
-            searchBookings(); // Refresh list
-            renderSlots(); // Refresh slots
+            searchBookings();
+            renderSlots();
         } else {
             showToast(result.error, 'error');
         }

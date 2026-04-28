@@ -91,8 +91,19 @@
             </div>
 
             <div class="form-group">
-                <label class="form-label">Service</label>
+                <label class="form-label">Services <span class="service-count-badge" id="service-count-badge" style="display:none;">0 selected</span></label>
                 <div class="service-grid" id="service-grid"></div>
+                <!-- Selected services summary -->
+                <div class="service-summary" id="service-summary" style="display:none;">
+                    <div class="service-summary-list" id="service-summary-list"></div>
+                    <div class="service-summary-total" id="service-summary-total">Total: ₹0</div>
+                </div>
+            </div>
+
+            <!-- Worker Selection (optional) -->
+            <div class="form-group" id="worker-group" style="display:none;">
+                <label class="form-label">Preferred Stylist <span style="color:var(--text-muted);font-weight:400;text-transform:none;">(optional)</span></label>
+                <div class="worker-selector" id="worker-selector"></div>
             </div>
 
             <div class="form-group">
@@ -120,7 +131,19 @@
     <!-- Toast -->
     <div class="toast" id="toast"></div>
 
+    <!-- Firebase SDK (compat CDN) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
+    <script src="js/firebase-config.js"></script>
     <script src="js/data.js"></script>
     <script src="js/client.js"></script>
+    <script>
+        // Initialize Firebase sync for client page
+        SalonData.initFirebase(() => {
+            // Data changed remotely — refresh the page state
+            if (typeof window._refreshSlots === 'function') window._refreshSlots();
+        });
+    </script>
 </body>
 </html>
