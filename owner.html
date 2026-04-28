@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Zerodot Salon — Owner Dashboard for managing appointments, hours, and settings.">
+    <title>Zerodot — Owner Dashboard</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="icon" href="logo.jpeg" type="image/jpeg">
+</head>
+<body>
+    <div class="app-container owner-page" id="app">
+
+        <!-- PIN Gate -->
+        <div id="pin-gate" class="pin-gate">
+            <img src="logo.jpeg" alt="Zerodot" class="pin-gate-logo">
+            <h2 class="brand-name">Zerodot</h2>
+            <p>Enter your 4-digit PIN to continue</p>
+            <div class="pin-input-group" id="pin-inputs">
+                <input type="tel" class="pin-digit" maxlength="1" data-idx="0" id="pin-0" autocomplete="off">
+                <input type="tel" class="pin-digit" maxlength="1" data-idx="1" id="pin-1" autocomplete="off">
+                <input type="tel" class="pin-digit" maxlength="1" data-idx="2" id="pin-2" autocomplete="off">
+                <input type="tel" class="pin-digit" maxlength="1" data-idx="3" id="pin-3" autocomplete="off">
+            </div>
+            <div class="pin-error" id="pin-error">Incorrect PIN. Try again.</div>
+            <button class="btn btn-primary" id="btn-pin-submit">Unlock Dashboard</button>
+        </div>
+
+        <!-- Dashboard (hidden until PIN verified) -->
+        <div id="dashboard" style="display:none;">
+            <!-- Header -->
+            <header class="header">
+                <a href="owner.html" class="header-brand">
+                    <img src="logo.jpeg" alt="Zerodot Logo" class="header-logo">
+                    <div>
+                        <div class="header-title brand-name">Zerodot</div>
+                        <div class="header-subtitle">Owner Dashboard</div>
+                    </div>
+                </a>
+                <div class="header-actions">
+                    <a href="index.html" class="btn btn-ghost btn-sm" title="View Client Page">👁️ Client</a>
+                    <button class="btn btn-ghost btn-icon" id="btn-logout" title="Logout">🔒</button>
+                </div>
+            </header>
+
+            <!-- Today's Stats -->
+            <div class="section-title" id="stats-date-label">Today's Overview</div>
+            <div class="stats-grid" id="stats-grid">
+                <div class="stat-card stat-upcoming">
+                    <div class="stat-number" id="stat-upcoming">0</div>
+                    <div class="stat-label">Upcoming</div>
+                </div>
+                <div class="stat-card stat-completed">
+                    <div class="stat-number" id="stat-completed">0</div>
+                    <div class="stat-label">Completed</div>
+                </div>
+                <div class="stat-card stat-cancelled">
+                    <div class="stat-number" id="stat-cancelled">0</div>
+                    <div class="stat-label">Cancelled</div>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="owner-tabs" id="owner-tabs">
+                <button class="owner-tab active" data-tab="appointments">Appointments</button>
+                <button class="owner-tab" data-tab="calendar">Calendar</button>
+                <button class="owner-tab" data-tab="settings">Settings</button>
+            </div>
+
+            <!-- Tab: Appointments -->
+            <div class="tab-panel active" id="tab-appointments">
+                <div class="date-filter">
+                    <select id="filter-date"></select>
+                </div>
+                <div id="appointments-list"></div>
+            </div>
+
+            <!-- Tab: Calendar -->
+            <div class="tab-panel" id="tab-calendar">
+                <div class="section-title">Next 7 Days — Appointment Counts</div>
+                <div class="date-strip" id="owner-date-strip" style="margin-bottom:32px;"></div>
+
+                <div class="section-title">Manage Leave Days</div>
+                <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:16px;">Tap a day to toggle it as a leave day. Existing bookings on that day will NOT be auto-cancelled — manage them manually.</p>
+                <div class="leave-calendar" id="leave-calendar"></div>
+            </div>
+
+            <!-- Tab: Settings -->
+            <div class="tab-panel" id="tab-settings">
+                <div class="settings-section">
+                    <div class="settings-section-title">Working Hours</div>
+                    <div class="settings-row">
+                        <span class="settings-label">Opening Time</span>
+                        <input type="number" class="settings-input" id="setting-open" min="0" max="23" value="9">
+                    </div>
+                    <div class="settings-row">
+                        <span class="settings-label">Closing Time</span>
+                        <input type="number" class="settings-input" id="setting-close" min="1" max="24" value="20">
+                    </div>
+                    <div style="margin-top:12px;">
+                        <button class="btn btn-primary btn-sm" id="btn-save-hours">Save Hours</button>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <div class="settings-section-title">Change PIN</div>
+                    <div class="settings-row">
+                        <span class="settings-label">Current PIN</span>
+                        <input type="password" class="settings-input" id="setting-current-pin" maxlength="4">
+                    </div>
+                    <div class="settings-row">
+                        <span class="settings-label">New PIN</span>
+                        <input type="password" class="settings-input" id="setting-new-pin" maxlength="4">
+                    </div>
+                    <div style="margin-top:12px;">
+                        <button class="btn btn-primary btn-sm" id="btn-change-pin">Change PIN</button>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <div class="settings-section-title">Data Management</div>
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                        <button class="btn btn-secondary btn-sm" id="btn-export">📥 Export Data</button>
+                        <button class="btn btn-secondary btn-sm" id="btn-import">📤 Import Data</button>
+                        <input type="file" id="import-file" accept=".json" style="display:none;">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <footer class="app-footer">
+                <p>© 2026 Zerodot Salon &nbsp;·&nbsp; <a href="index.html">Client Booking</a></p>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Confirm Modal -->
+    <div class="modal-overlay" id="action-modal">
+        <div class="modal-box">
+            <div class="modal-title" id="modal-title">Confirm</div>
+            <div class="modal-message" id="modal-message">Are you sure?</div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" id="modal-no">Cancel</button>
+                <button class="btn btn-danger" id="modal-yes">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script src="js/data.js"></script>
+    <script src="js/owner.js"></script>
+</body>
+</html>

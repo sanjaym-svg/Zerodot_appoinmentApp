@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Book your appointment at Zerodot Salon — Quick, easy online booking for haircuts, styling, and grooming services.">
+    <title>Zerodot — Book Appointment</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="icon" href="logo.jpeg" type="image/jpeg">
+</head>
+<body>
+    <div class="app-container" id="app">
+        <!-- Header -->
+        <header class="header">
+            <a href="index.html" class="header-brand">
+                <img src="logo.jpeg" alt="Zerodot Logo" class="header-logo" id="header-logo">
+                <div>
+                    <div class="header-title brand-name">Zerodot</div>
+                    <div class="header-subtitle">Hair Salon</div>
+                </div>
+            </a>
+            <div class="header-actions">
+                <button class="btn btn-ghost btn-icon" id="btn-check-booking" title="Check My Booking">📋</button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main id="main-content">
+            <!-- Step 1: Date Selection -->
+            <div class="section-title">Pick a Date</div>
+            <div class="date-strip" id="date-strip"></div>
+
+            <!-- Step 2: Time Slots -->
+            <div class="section-title" id="slots-title">Choose a Time</div>
+            <div id="slots-container">
+                <div class="slots-grid animate-stagger" id="slots-grid"></div>
+            </div>
+
+            <!-- Check Booking Section (hidden by default) -->
+            <div class="check-booking-section" id="check-booking-section" style="display:none;">
+                <div class="section-title">My Bookings</div>
+                <div class="phone-search">
+                    <input type="tel" class="form-input" id="search-phone" placeholder="Enter your phone number" maxlength="10">
+                    <button class="btn btn-primary btn-sm" id="btn-search">Find</button>
+                </div>
+                <div class="bookings-list" id="bookings-list"></div>
+            </div>
+        </main>
+
+        <!-- Confirmation Screen (hidden) -->
+        <div id="confirmation-screen" style="display:none;"></div>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <p>© 2026 Zerodot Salon &nbsp;·&nbsp; <a href="owner.html">Owner Login</a></p>
+        </footer>
+    </div>
+
+    <!-- Booking Form Overlay -->
+    <div class="form-overlay" id="form-overlay"></div>
+
+    <!-- Booking Form (slides up from bottom) -->
+    <div class="booking-form-wrapper" id="booking-form-wrapper">
+        <div class="booking-form" id="booking-form">
+            <div class="form-handle"></div>
+            <div class="form-title">Book Appointment</div>
+            <div class="form-slot-info" id="form-slot-info">📅 Select a slot</div>
+
+            <div class="form-group">
+                <label class="form-label">Your Name</label>
+                <input type="text" class="form-input" id="input-name" placeholder="Full name" autocomplete="name" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Phone Number</label>
+                <input type="tel" class="form-input" id="input-phone" placeholder="10-digit mobile number" maxlength="10" autocomplete="tel" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Gender</label>
+                <div class="gender-toggle" id="gender-toggle">
+                    <div class="gender-option" data-gender="male">
+                        <div class="gender-icon">👨</div>
+                        <div class="gender-label">Male</div>
+                    </div>
+                    <div class="gender-option" data-gender="female">
+                        <div class="gender-icon">👩</div>
+                        <div class="gender-label">Female</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Service</label>
+                <div class="service-grid" id="service-grid"></div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Notes <span style="color:var(--text-muted);font-weight:400;text-transform:none;">(optional)</span></label>
+                <textarea class="form-input" id="input-notes" placeholder="Any special request..." rows="2"></textarea>
+            </div>
+
+            <button class="btn btn-primary btn-full" id="btn-confirm-booking">Confirm Booking</button>
+            <button class="btn btn-ghost btn-full" id="btn-cancel-form" style="margin-top:8px;">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Cancel Confirm Modal -->
+    <div class="modal-overlay" id="cancel-modal">
+        <div class="modal-box">
+            <div class="modal-title">Cancel Booking?</div>
+            <div class="modal-message">Are you sure you want to cancel this appointment? This action cannot be undone.</div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" id="modal-cancel-no">Keep It</button>
+                <button class="btn btn-danger" id="modal-cancel-yes">Cancel Booking</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script src="js/data.js"></script>
+    <script src="js/client.js"></script>
+</body>
+</html>
