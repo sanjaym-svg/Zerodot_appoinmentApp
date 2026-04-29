@@ -68,7 +68,21 @@ const SalonData = (() => {
     function _get(key, fallback) {
         try {
             const raw = localStorage.getItem(key);
-            return raw ? JSON.parse(raw) : fallback;
+            if (!raw) return fallback;
+            let parsed = JSON.parse(raw);
+            
+            // Firebase array sanitization: handles sparse arrays (nulls) and object-converted arrays
+            if (Array.isArray(fallback)) {
+                if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                    parsed = Object.values(parsed);
+                }
+                if (Array.isArray(parsed)) {
+                    parsed = parsed.filter(item => item !== null && item !== undefined);
+                } else {
+                    return fallback;
+                }
+            }
+            return parsed;
         } catch { return fallback; }
     }
     function _set(key, val) {
