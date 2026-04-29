@@ -49,37 +49,15 @@ document.addEventListener('DOMContentLoaded', () => {
         OwnerTabs.renderServiceManager(showToast);
         bindTabs(); bindSettings(); bindLogout(); bindStaffTab(); bindPaymentsTab(); bindServiceManager();
 
-        // Initialize Firebase sync
+        // Initialize Firebase — auto-sync silently
         const fbOk = SalonData.initFirebase((changedPath) => {
             renderStats(); renderAppointments();
             if (currentTab === 'staff') OwnerTabs.renderStaffTab(showToast);
             if (currentTab === 'payments') OwnerTabs.renderPaymentsTab(showToast);
             if (currentTab === 'reports') OwnerTabs.renderReportsTab();
         });
-
-        // Update Firebase status indicator
-        updateFirebaseStatus(fbOk);
-        document.addEventListener('firebase-status', (e) => updateFirebaseStatus(e.detail.connected));
-
-        // Migrate button
-        document.getElementById('btn-migrate-fb').addEventListener('click', () => {
-            const result = SalonData.migrateToFirebase();
-            if (result.success) showToast(`✅ Migrated ${result.migrated} data sets to cloud`, 'success');
-            else showToast(result.error || 'Migration failed', 'error');
-        });
-    }
-
-    function updateFirebaseStatus(connected) {
-        const dot = document.getElementById('fb-status-dot');
-        const text = document.getElementById('fb-status-text');
-        if (!dot || !text) return;
-        if (connected) {
-            dot.className = 'fb-dot online';
-            text.textContent = 'Connected — syncing in real-time';
-        } else {
-            dot.className = 'fb-dot offline';
-            text.textContent = 'Offline — using local storage';
-        }
+        // Auto-migrate on first connect (silent)
+        if (fbOk) SalonData.migrateToFirebase();
     }
 
     // Tabs
@@ -314,30 +292,6 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('setting-current-pin').value = '';
             document.getElementById('setting-new-pin').value = '';
             showToast('PIN changed successfully', 'success');
-        });
-        document.getElementById('btn-export').addEventListener('click', () => {
-            const data = SalonData.exportData();
-            const blob = new Blob([data], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a'); a.href = url; a.download = `zerodot_backup_${_today()}.json`; a.click();
-            URL.revokeObjectURL(url);
-            showToast('Data exported', 'success');
-        });
-        document.getElementById('btn-import').addEventListener('click', () => {
-            document.getElementById('import-file').click();
-        });
-        document.getElementById('import-file').addEventListener('change', (e) => {
-            const file = e.target.files[0]; if (!file) return;
-            showModal('Import Data?', 'This will replace all existing data.', () => {
-                const reader = new FileReader();
-                reader.onload = () => {
-                    const result = SalonData.importData(reader.result);
-                    if (result.success) { showToast('Data imported', 'success'); loadSettings(); renderStats(); renderDateFilter(); renderAppointments(); renderCalendarTab(); }
-                    else showToast(result.error, 'error');
-                };
-                reader.readAsText(file);
-            });
-            e.target.value = '';
         });
     }
 

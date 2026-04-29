@@ -11,7 +11,7 @@ const FirebaseSync = (() => {
     const FIREBASE_CONFIG = {
         apiKey: "AIzaSyBwkdU2QLHLER7nE6qST0Jh6TGTOiuTLxg",
         authDomain: "zerodotsaloon-app.firebaseapp.com",
-        databaseURL: "https://zerodotsaloon-app-default-rtdb.firebaseio.com",
+        databaseURL: "https://zerodotsaloon-app-default-rtdb.asia-southeast1.firebasedatabase.app",
         projectId: "zerodotsaloon-app",
         storageBucket: "zerodotsaloon-app.firebasestorage.app",
         messagingSenderId: "345182033048",

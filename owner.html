@@ -236,29 +236,10 @@
                         <button class="btn btn-primary btn-sm" id="btn-change-pin">Change PIN</button>
                     </div>
                 </div>
-
-                <!-- Data Management -->
-                <div class="settings-section">
-                    <div class="settings-section-title">Data Management</div>
-                    <div style="display:flex;gap:10px;flex-wrap:wrap;">
-                        <button class="btn btn-secondary btn-sm" id="btn-export">📥 Export Data</button>
-                        <button class="btn btn-secondary btn-sm" id="btn-import">📤 Import Data</button>
-                        <input type="file" id="import-file" accept=".json" style="display:none;">
-                    </div>
-                </div>
-
-                <!-- Firebase Status -->
-                <div class="settings-section">
-                    <div class="settings-section-title">☁️ Cloud Sync (Firebase)</div>
-                    <div class="firebase-status" id="firebase-status">
-                        <span id="fb-status-dot" class="fb-dot offline"></span>
-                        <span id="fb-status-text">Checking...</span>
-                    </div>
-                    <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;">
-                        <button class="btn btn-secondary btn-sm" id="btn-migrate-fb">🔄 Migrate Data to Cloud</button>
-                    </div>
-                    <p style="font-size:0.75rem;color:var(--text-muted);margin-top:10px;">Data syncs automatically when connected. Use Migrate to push all local data to cloud.</p>
-                </div>
+                <!-- Hidden elements for backward compat -->
+                <input type="file" id="import-file" accept=".json" style="display:none;">
+                <span id="fb-status-dot" style="display:none;"></span>
+                <span id="fb-status-text" style="display:none;"></span>
             </div>
 
             <!-- Footer -->
