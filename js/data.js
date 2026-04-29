@@ -10,11 +10,20 @@ const SalonData = (() => {
         APPOINTMENTS: 'zerodot_appointments',
         SETTINGS: 'zerodot_settings',
         WORKERS: 'zerodot_workers',
+        LEDGER: 'zerodot_ledger',
+        SEED_CASH: 'zerodot_seed_cash',
     };
 
     const DEFAULT_SETTINGS = {
-        openTime: 9,    // 9 AM
-        closeTime: 20,  // 8 PM
+        workingHours: {
+            0: { open: 9, close: 20, isClosed: false },
+            1: { open: 9, close: 20, isClosed: false },
+            2: { open: 9, close: 20, isClosed: false },
+            3: { open: 9, close: 20, isClosed: false },
+            4: { open: 9, close: 20, isClosed: false },
+            5: { open: 9, close: 20, isClosed: false },
+            6: { open: 9, close: 20, isClosed: false },
+        },
         slotDuration: 60, // minutes
         leaveDays: [],  // array of date strings "YYYY-MM-DD"
         ownerPin: '1234',
@@ -24,17 +33,17 @@ const SalonData = (() => {
     // Owner can add/edit/remove from the dashboard
     const DEFAULT_SERVICES = {
         male: [
-            { id: 'haircut_m', name: 'Haircut', icon: '✂️', price: 200 },
-            { id: 'beard_trim', name: 'Beard Trim', icon: '🪒', price: 100 },
+            { id: 'haircut_m', name: 'Haircut', icon: '✂', price: 200 },
+            { id: 'beard_trim', name: 'Beard Trim', icon: 'M', price: 100 },
             { id: 'hair_color_m', name: 'Hair Color', icon: '🎨', price: 800 },
-            { id: 'head_massage', name: 'Head Massage', icon: '💆‍♂️', price: 300 },
+            { id: 'head_massage', name: 'Head Massage', icon: '💆', price: 300 },
             { id: 'facial_m', name: 'Facial', icon: '✨', price: 500 },
             { id: 'full_package_m', name: 'Full Package', icon: '👑', price: 1200 },
         ],
         female: [
-            { id: 'haircut_f', name: 'Haircut', icon: '✂️', price: 300 },
+            { id: 'haircut_f', name: 'Haircut', icon: '✂', price: 300 },
             { id: 'hair_color_f', name: 'Hair Color', icon: '🎨', price: 1500 },
-            { id: 'hair_spa', name: 'Hair Spa', icon: '🧖‍♀️', price: 800 },
+            { id: 'hair_spa', name: 'Hair Spa', icon: '🧖', price: 800 },
             { id: 'facial_f', name: 'Facial', icon: '✨', price: 600 },
             { id: 'bridal_makeup', name: 'Bridal Makeup', icon: '👰', price: 5000 },
             { id: 'threading', name: 'Threading', icon: '🪡', price: 100 },
@@ -47,6 +56,8 @@ const SalonData = (() => {
         [KEYS.APPOINTMENTS]: 'appointments',
         [KEYS.SETTINGS]: 'settings',
         [KEYS.WORKERS]: 'workers',
+        [KEYS.LEDGER]: 'ledger',
+        [KEYS.SEED_CASH]: 'seed_cash',
     };
 
     // Track if Firebase sync is active
@@ -260,7 +271,19 @@ const SalonData = (() => {
         const now = new Date();
         const isToday = dateStr === _today();
 
-        for (let h = s.openTime; h < s.closeTime; h++) {
+        // Get day of week safely in local time (avoid UTC offset bugs)
+        const [year, month, day] = dateStr.split('-');
+        const targetDate = new Date(year, month - 1, day);
+        const dayOfWeek = targetDate.getDay();
+
+        // Fallback to legacy openTime/closeTime if workingHours not fully initialized
+        const dayHours = s.workingHours && s.workingHours[dayOfWeek] ? s.workingHours[dayOfWeek] : { open: s.openTime || 9, close: s.closeTime || 20, isClosed: false };
+
+        if (dayHours.isClosed) {
+            return slots; // Return empty array if shop is closed today
+        }
+
+        for (let h = dayHours.open; h < dayHours.close; h++) {
             const startLabel = _formatHour(h);
             const endLabel = _formatHour(h + 1);
             const slotTime = `${startLabel} - ${endLabel}`;
@@ -577,13 +600,18 @@ const SalonData = (() => {
         for (let i = 0; i < count; i++) {
             const d = new Date(now);
             d.setDate(d.getDate() + i);
+            const dateStr = _formatDate(d);
+            const s = getSettings();
+            const dayOfWeek = d.getDay();
+            const dayHours = s.workingHours && s.workingHours[dayOfWeek] ? s.workingHours[dayOfWeek] : { isClosed: false };
+            
             days.push({
-                date: _formatDate(d),
+                date: dateStr,
                 dayName: d.toLocaleDateString('en-US', { weekday: 'short' }),
                 dayNum: d.getDate(),
                 monthName: d.toLocaleDateString('en-US', { month: 'short' }),
                 isToday: i === 0,
-                isLeave: isLeaveDay(_formatDate(d)),
+                isLeave: isLeaveDay(dateStr) || dayHours.isClosed,
             });
         }
         return days;
@@ -594,6 +622,136 @@ const SalonData = (() => {
     }
 
     // =============================================
+    // DAILY LEDGER (CASH BOOK)
+    // =============================================
+    function getLedgerData() {
+        return _get(KEYS.LEDGER, {});
+    }
+
+    function _saveLedgerData(data) {
+        _set(KEYS.LEDGER, data);
+    }
+
+    function getSeedOpeningBalance() {
+        return Number(_get(KEYS.SEED_CASH, 0));
+    }
+
+    function setSeedOpeningBalance(amount) {
+        _set(KEYS.SEED_CASH, parseInt(amount) || 0);
+    }
+
+    function getOpeningBalance(targetDateStr) {
+        const data = getLedgerData();
+        const allAppts = getAllAppointments();
+        
+        let balance = getSeedOpeningBalance();
+        
+        const allDatesSet = new Set(Object.keys(data));
+        allAppts.forEach(a => {
+            if (a.status === 'completed' && a.payment && a.payment.status === 'paid') {
+                allDatesSet.add(a.date);
+            }
+        });
+        const allDates = Array.from(allDatesSet).sort();
+        
+        for (const d of allDates) {
+            if (d >= targetDateStr) break;
+            
+            const ledger = computeDayLedger(d, balance);
+            balance = ledger.handCash; 
+        }
+        
+        return balance;
+    }
+
+    function computeDayLedger(dateStr, openingBalance) {
+        const data = getLedgerData();
+        const dayAppts = getAppointmentsByDate(dateStr).filter(a => a.status === 'completed' && a.payment && a.payment.status === 'paid');
+        
+        const revCash = dayAppts.filter(a => a.payment.method === 'cash').reduce((sum, a) => sum + (a.payment.amount || 0), 0);
+        const revUpi = dayAppts.filter(a => a.payment.method === 'upi').reduce((sum, a) => sum + (a.payment.amount || 0), 0);
+        const revCard = dayAppts.filter(a => a.payment.method === 'card').reduce((sum, a) => sum + (a.payment.amount || 0), 0);
+        
+        const dayData = data[dateStr] || { expenses: [] };
+        const expensesData = dayData.expenses || [];
+        
+        const businessExpenses = expensesData.filter(e => e.type !== 'withdrawal');
+        const expensesCash = businessExpenses.filter(e => !e.method || e.method === 'cash').reduce((sum, e) => sum + (e.amount || 0), 0);
+        const expensesUpi = businessExpenses.filter(e => e.method === 'upi').reduce((sum, e) => sum + (e.amount || 0), 0);
+        const expensesTotal = expensesCash + expensesUpi;
+        
+        const withdrawals = expensesData.filter(e => e.type === 'withdrawal');
+        const withdrawalsCash = withdrawals.filter(w => !w.method || w.method === 'cash').reduce((sum, w) => sum + (w.amount || 0), 0);
+        const withdrawalsUpi = withdrawals.filter(w => w.method === 'upi').reduce((sum, w) => sum + (w.amount || 0), 0);
+        const withdrawalsTotal = withdrawalsCash + withdrawalsUpi;
+
+        const handCash = openingBalance + revCash - expensesCash - withdrawalsCash;
+        const closingBalance = openingBalance + (revCash + revUpi + revCard) - expensesTotal - withdrawalsTotal;
+
+        return {
+            date: dateStr,
+            openingBalance,
+            expenses: expensesData,
+            expensesTotal,
+            expensesCash,
+            expensesUpi,
+            withdrawalsTotal,
+            withdrawalsCash,
+            withdrawalsUpi,
+            revenueCash: revCash,
+            revenueUpi: revUpi,
+            revenueCard: revCard,
+            revenueTotal: revCash + revUpi + revCard,
+            digitalRevenue: revUpi + revCard,
+            closingBalance,
+            handCash,
+            payments: dayAppts.map(a => ({
+                id: a.id,
+                name: a.name,
+                services: (a.services || []).map(s => s.name).join(', '),
+                amount: a.payment.amount,
+                method: a.payment.method,
+                time: a.timeSlot
+            }))
+        };
+    }
+
+    function getDailyLedger(dateStr) {
+        const opening = getOpeningBalance(dateStr);
+        return computeDayLedger(dateStr, opening);
+    }
+
+    function updateOpeningBalance(dateStr, amount) {
+        if (amount === null || amount === '') return;
+        setSeedOpeningBalance(amount);
+    }
+
+    function addExpense(dateStr, note, amount, method = 'cash', type = 'expense', category = 'other') {
+        const data = getLedgerData();
+        if (!data[dateStr]) data[dateStr] = { expenses: [] };
+        if (!data[dateStr].expenses) data[dateStr].expenses = [];
+        
+        data[dateStr].expenses.push({
+            id: _generateId(type === 'withdrawal' ? 'WDL' : 'EXP'),
+            note,
+            amount: parseInt(amount) || 0,
+            method,
+            type, // 'expense' or 'withdrawal'
+            category, // 'supplies', 'rent', etc.
+            timestamp: new Date().toISOString()
+        });
+        _saveLedgerData(data);
+    }
+
+    function deleteExpense(dateStr, expId) {
+        const data = getLedgerData();
+        if (data[dateStr] && data[dateStr].expenses) {
+            data[dateStr].expenses = data[dateStr].expenses.filter(e => e.id !== expId);
+            _saveLedgerData(data);
+        }
+    }
+
+    // =============================================
     // EXPORT / IMPORT
     // =============================================
     function exportData() {
@@ -601,6 +759,8 @@ const SalonData = (() => {
             appointments: getAllAppointments(),
             settings: getSettings(),
             workers: getWorkers(),
+            ledger: getLedgerData(),
+            seed_cash: getSeedOpeningBalance(),
             exportedAt: new Date().toISOString(),
         }, null, 2);
     }
@@ -611,6 +771,8 @@ const SalonData = (() => {
             if (data.appointments) _set(KEYS.APPOINTMENTS, data.appointments);
             if (data.settings) _set(KEYS.SETTINGS, data.settings);
             if (data.workers) _set(KEYS.WORKERS, data.workers);
+            if (data.ledger) _set(KEYS.LEDGER, data.ledger);
+            if (data.seed_cash !== undefined) _set(KEYS.SEED_CASH, data.seed_cash);
             return { success: true };
         } catch {
             return { success: false, error: 'Invalid data format.' };
@@ -631,13 +793,15 @@ const SalonData = (() => {
         const ok = FirebaseSync.init();
         if (ok) {
             _firebaseReady = true;
-            // Set up real-time listeners for cross-device sync
-            _setupListeners();
-            // Push current local data to Firebase if Firebase is empty
-            _initialSync();
-            return true;
+            // Listen for remote changes on all paths
+            Object.keys(FB_PATHS).forEach(localKey => {
+                const path = FB_PATHS[localKey];
+                FirebaseSync.listen(path, localKey, (data) => {
+                    if (_onDataChange) _onDataChange(localKey);
+                });
+            });
         }
-        return false;
+        return ok;
     }
 
     function _setupListeners() {
@@ -706,6 +870,10 @@ const SalonData = (() => {
 
         // Payments
         markPayment,
+
+        // Ledger
+        getDailyLedger, updateOpeningBalance, addExpense, deleteExpense,
+        getSeedOpeningBalance, setSeedOpeningBalance,
 
         // Analytics
         getClientHistory, getRevenueStats, getTopServices, getWorkerStats,

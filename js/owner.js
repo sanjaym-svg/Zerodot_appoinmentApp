@@ -121,7 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             appointments = SalonData.getAllAppointments().filter(a => a.date === filterDate);
             const so = { upcoming: 0, completed: 1, cancelled: 2 };
-            appointments.sort((a, b) => (so[a.status]??9) - (so[b.status]??9) || a.timeSlot.localeCompare(b.timeSlot));
+            appointments.sort((a, b) => (so[a.status] ?? 9) - (so[b.status] ?? 9) || a.timeSlot.localeCompare(b.timeSlot));
         }
         if (!appointments.length) {
             container.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><p>No appointments ' + (filterDate ? 'for this day' : 'found') + '.</p></div>';
@@ -129,47 +129,60 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         container.innerHTML = '';
         appointments.forEach(appt => {
-            const statusClass = appt.status === 'upcoming' ? 'badge-upcoming' : appt.status === 'completed' ? 'badge-completed' : 'badge-cancelled';
-            const svcLabel = appt.services ? appt.services.map(s => (s.icon||'') + ' ' + s.name).join(', ') : (appt.service || '');
+            let statusBg = 'transparent', statusColor = 'var(--text-muted)';
+            if (appt.status === 'upcoming') { statusBg = 'rgba(59, 130, 246, 0.15)'; statusColor = 'var(--info)'; }
+            else if (appt.status === 'completed') { statusBg = 'var(--success)'; statusColor = '#000'; }
+            else if (appt.status === 'cancelled') { statusBg = 'rgba(239, 68, 68, 0.15)'; statusColor = 'var(--error)'; }
+
+            const svcLabel = appt.services ? appt.services.map(s => s.name).join(', ') : (appt.service || '');
             const isPaid = appt.payment && appt.payment.status === 'paid';
+            
             const card = document.createElement('div');
             card.className = 'owner-appointment-card';
+            card.style.cssText = 'background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-md);padding:16px;margin-bottom:12px;transition:var(--transition);';
+            card.addEventListener('mouseover', () => card.style.background = '#141414');
+            card.addEventListener('mouseout', () => card.style.background = 'var(--bg-card)');
+            
             card.innerHTML = `
-                <div class="owner-appointment-header">
-                    <div class="owner-client-name">${appt.name}</div>
-                    <span class="booking-status-badge ${statusClass}">${appt.status}</span>
-                </div>
-                <div class="owner-appointment-meta">
-                    <span>📅 ${appt.date}</span><span>⏰ ${appt.timeSlot}</span>
-                    <span>📱 <a href="tel:${appt.phone}" style="color:var(--info);text-decoration:none;">${appt.phone}</a></span>
-                    <span>${appt.gender === 'male' ? '👨' : '👩'} ${appt.gender}</span>
-                    <span>✂️ ${svcLabel}</span>
-                    ${appt.totalAmount ? '<span>💰 ₹' + appt.totalAmount + '</span>' : ''}
-                    ${appt.workerName ? '<span>💇 ' + appt.workerName + '</span>' : ''}
-                    ${isPaid ? '<span style="color:var(--success)">✅ Paid ₹' + appt.payment.amount + ' (' + appt.payment.method + ')</span>' : ''}
-                    ${appt.notes ? '<span>📝 ' + appt.notes + '</span>' : ''}
-                </div>
-                <div class="owner-appointment-actions">
-                    ${appt.status === 'upcoming' ? `
-                        <button class="btn btn-success btn-sm complete-btn" data-id="${appt.id}" data-amount="${appt.totalAmount||0}">💰 Complete & Pay</button>
-                        <button class="btn btn-danger btn-sm cancel-btn" data-id="${appt.id}">✕ Cancel</button>
-                        <a href="tel:${appt.phone}" class="btn btn-secondary btn-sm">📞 Call</a>
-                    ` : ''}
-                    ${appt.status === 'completed' && !isPaid ? `<button class="btn btn-success btn-sm pay-btn" data-id="${appt.id}" data-amount="${appt.totalAmount||0}">💰 Collect Payment</button>` : ''}
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
+                    <!-- LEFT COLUMN -->
+                    <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:0;">
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <span style="font-size:1.05rem;font-weight:700;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${appt.name}</span>
+                            <span style="padding:2px 6px;border-radius:4px;font-size:0.65rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;background:${statusBg};color:${statusColor};flex-shrink:0;">${appt.status}</span>
+                        </div>
+                        <div style="font-size:0.85rem;font-weight:600;color:var(--text-primary);">${appt.timeSlot} <span style="color:var(--text-secondary);font-weight:400;margin-left:4px;">${appt.phone} • <span style="text-transform:capitalize;">${appt.gender}</span></span></div>
+                        <div style="font-size:0.8rem;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${svcLabel}</div>
+                    </div>
+                    
+                    <!-- RIGHT COLUMN -->
+                    <div style="display:flex;flex-direction:column;align-items:flex-end;text-align:right;flex-shrink:0;">
+                        <div style="font-size:1.1rem;font-weight:700;color:var(--text-primary);">₹${appt.totalAmount || 0}</div>
+                        ${isPaid ? `<div style="font-size:0.7rem;color:var(--success);font-weight:600;">Paid via ${appt.payment.method}</div>` : ''}
+                        
+                        ${appt.status === 'upcoming' ? `
+                        <div style="display:flex;gap:6px;margin-top:12px;">
+                            <button class="btn btn-sm complete-btn" data-id="${appt.id}" data-amount="${appt.totalAmount || 0}" style="background:var(--success);color:#000;border:none;padding:4px 10px;font-size:0.75rem;border-radius:4px;cursor:pointer;font-weight:600;">Pay</button>
+                            <a href="tel:${appt.phone}" class="btn btn-secondary btn-sm" style="padding:4px 10px;font-size:0.75rem;border-radius:4px;text-decoration:none;">Call</a>
+                            <button class="btn btn-ghost btn-sm cancel-btn" data-id="${appt.id}" style="color:var(--error);padding:4px 10px;font-size:0.75rem;border-radius:4px;cursor:pointer;background:transparent;border:none;">Cancel</button>
+                        </div>
+                        ` : ''}
+                        ${appt.status === 'completed' && !isPaid ? `<button class="btn btn-success btn-sm pay-btn" data-id="${appt.id}" data-amount="${appt.totalAmount || 0}" style="margin-top:12px;padding:4px 10px;font-size:0.75rem;border-radius:4px;">Collect</button>` : ''}
+                    </div>
                 </div>`;
             container.appendChild(card);
         });
 
         container.querySelectorAll('.complete-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                OwnerTabs.openPaymentModal(btn.dataset.id, parseInt(btn.dataset.amount)||0, (msg, type) => {
+                OwnerTabs.openPaymentModal(btn.dataset.id, parseInt(btn.dataset.amount) || 0, (msg, type) => {
                     showToast(msg, type); renderStats(); renderAppointments();
                 });
             });
         });
         container.querySelectorAll('.pay-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                OwnerTabs.openPaymentModal(btn.dataset.id, parseInt(btn.dataset.amount)||0, (msg, type) => {
+                OwnerTabs.openPaymentModal(btn.dataset.id, parseInt(btn.dataset.amount) || 0, (msg, type) => {
                     showToast(msg, type); renderStats(); renderAppointments();
                 });
             });
@@ -223,13 +236,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Payments tab bindings
     function bindPaymentsTab() {
-        document.getElementById('btn-client-search').addEventListener('click', () => OwnerTabs.renderClientHistory());
-        document.getElementById('client-search-phone').addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') OwnerTabs.renderClientHistory();
-        });
-        document.getElementById('client-search-phone').addEventListener('input', (e) => {
-            e.target.value = e.target.value.replace(/\D/g, '');
-        });
+        // Event bindings for payments are now handled dynamically in owner-tabs.js 
+        // during renderPaymentsTab() because the DOM is frequently rebuilt.
     }
 
     // Service Manager bindings
@@ -252,11 +260,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         document.getElementById('btn-save-new-svc').addEventListener('click', () => {
             const name = document.getElementById('new-svc-name').value.trim();
-            const icon = document.getElementById('new-svc-icon').value.trim() || '✂️';
             const price = parseInt(document.getElementById('new-svc-price').value) || 0;
             if (!name) { showToast('Enter service name', 'error'); return; }
             const activeGender = document.querySelector('.svc-mgr-tab.active')?.dataset.gender || 'male';
-            SalonData.addService(activeGender, { name, icon, price });
+            SalonData.addService(activeGender, { name, icon: '', price });
             showToast('Service added!', 'success');
             document.getElementById('new-svc-name').value = '';
             document.getElementById('new-svc-price').value = '';
@@ -268,19 +275,71 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Settings
     function loadSettings() {
+        // Working hours are now handled by renderWorkingHours()
+    }
+
+    function renderWorkingHours() {
+        const grid = document.getElementById('day-hours-grid');
         const s = SalonData.getSettings();
-        document.getElementById('setting-open').value = s.openTime;
-        document.getElementById('setting-close').value = s.closeTime;
+        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        
+        let hoursObj = s.workingHours;
+        if (!hoursObj) {
+            // Fallback for older data
+            hoursObj = {};
+            for (let i = 0; i < 7; i++) {
+                hoursObj[i] = { open: s.openTime || 9, close: s.closeTime || 20, isClosed: false };
+            }
+        }
+
+        grid.innerHTML = '';
+        days.forEach((day, index) => {
+            const h = hoursObj[index];
+            grid.innerHTML += `
+                <div class="day-hours-row" style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-md);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                    <div class="day-hours-name" style="width:50px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;font-size:0.8rem;letter-spacing:0.05em;">${day.substring(0, 3)}</div>
+                    <div class="day-hours-inputs" style="display:flex;align-items:center;gap:8px;${h.isClosed ? 'opacity:0.3;pointer-events:none;' : ''}">
+                        <input type="time" class="settings-input hour-open" data-day="${index}" value="${String(h.open).padStart(2, '0')}:00" style="padding:6px 10px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);color-scheme:dark;">
+                        <span class="day-hours-dash" style="color:var(--text-muted);">-</span>
+                        <input type="time" class="settings-input hour-close" data-day="${index}" value="${String(h.close).padStart(2, '0')}:00" style="padding:6px 10px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);color-scheme:dark;">
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" class="day-closed-cb" data-day="${index}" ${h.isClosed ? 'checked' : ''}>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            `;
+        });
+
+        grid.querySelectorAll('.day-closed-cb').forEach(cb => {
+            cb.addEventListener('change', (e) => {
+                const inputs = e.target.closest('.day-hours-row').querySelector('.day-hours-inputs');
+                inputs.style.opacity = e.target.checked ? '0.3' : '1';
+                inputs.style.pointerEvents = e.target.checked ? 'none' : 'auto';
+            });
+        });
     }
 
     function bindSettings() {
+        renderWorkingHours();
         document.getElementById('btn-save-hours').addEventListener('click', () => {
-            const open = parseInt(document.getElementById('setting-open').value);
-            const close = parseInt(document.getElementById('setting-close').value);
-            if (isNaN(open) || isNaN(close) || open < 0 || close > 24 || open >= close) {
-                showToast('Invalid hours.', 'error'); return;
-            }
-            SalonData.updateSettings({ openTime: open, closeTime: close });
+            const grid = document.getElementById('day-hours-grid');
+            const newHours = {};
+            let valid = true;
+            grid.querySelectorAll('.day-hours-row').forEach(row => {
+                const dayIdx = row.querySelector('.hour-open').dataset.day;
+                const openStr = row.querySelector('.hour-open').value;
+                const closeStr = row.querySelector('.hour-close').value;
+                const open = parseInt(openStr.split(':')[0]);
+                const close = parseInt(closeStr.split(':')[0]);
+                const isClosed = row.querySelector('.day-closed-cb').checked;
+                if (!isClosed && (isNaN(open) || isNaN(close) || open < 0 || close > 24 || open >= close)) {
+                    valid = false;
+                }
+                newHours[dayIdx] = { open, close, isClosed };
+            });
+            if (!valid) { showToast('Invalid hours detected.', 'error'); return; }
+            SalonData.updateSettings({ workingHours: newHours });
             showToast('Working hours updated', 'success');
         });
         document.getElementById('btn-change-pin').addEventListener('click', () => {
@@ -328,7 +387,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function _today() {
         const d = new Date();
-        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     }
 
     initPinGate();

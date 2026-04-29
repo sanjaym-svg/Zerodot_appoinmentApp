@@ -39,6 +39,12 @@ document.addEventListener('DOMContentLoaded', () => {
     function init() {
         renderDateStrip();
         bindEvents();
+
+        // Expose refresh function for Firebase sync
+        window._refreshSlots = () => {
+            renderDateStrip();
+            if (selectedDate) renderSlots();
+        };
     }
 
     // ——— Date Strip ———
@@ -99,7 +105,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (SalonData.isLeaveDay(selectedDate)) {
             slotsContainer.innerHTML = `
                 <div class="leave-message">
-                    <div class="leave-icon">🏖️</div>
                     <h3>Salon is closed on this day</h3>
                     <p>Please select another date.</p>
                 </div>
@@ -108,12 +113,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const slots = SalonData.getSlots(selectedDate);
+        if (slots.length === 0) {
+            slotsContainer.innerHTML = `
+                <div class="leave-message">
+                    <h3>Salon is closed on this day</h3>
+                    <p>Please select another date.</p>
+                </div>
+            `;
+            return;
+        }
+
         const availableSlots = slots.filter(s => !s.isPast);
 
         if (availableSlots.length === 0) {
             slotsContainer.innerHTML = `
                 <div class="no-slots-message">
-                    <div class="icon">⏰</div>
                     <p>No available slots for this day. All time slots have passed.</p>
                 </div>
             `;
@@ -129,9 +143,7 @@ document.addEventListener('DOMContentLoaded', () => {
             card.dataset.time = slot.time;
 
             const startTime = slot.time.split(' - ')[0];
-            const spotsLeft = slot.capacity - slot.bookingsCount;
-            const spotsLabel = slot.isBooked ? 'Full' :
-                (slot.capacity > 1 ? `${spotsLeft} spot${spotsLeft > 1 ? 's' : ''}` : 'Available');
+            const spotsLabel = slot.isBooked ? 'Booked' : 'Available';
 
             card.innerHTML = `
                 <div class="slot-time">${startTime}</div>
@@ -195,7 +207,7 @@ document.addEventListener('DOMContentLoaded', () => {
             card.dataset.serviceId = svc.id;
             card.innerHTML = `
                 <div class="service-check-mark">✓</div>
-                <div class="service-icon">${svc.icon}</div>
+                <div class="service-icon">${svc.name.charAt(0)}</div>
                 <div class="service-name">${svc.name}</div>
                 <div class="service-price">₹${svc.price}</div>
             `;
@@ -232,7 +244,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const total = selectedServices.reduce((sum, s) => sum + (s.price || 0), 0);
 
         serviceSummaryList.innerHTML = selectedServices
-            .map(s => `<span class="summary-chip">${s.icon} ${s.name} <span class="chip-price">₹${s.price}</span></span>`)
+            .map(s => `<span class="summary-chip">${s.name} <span class="chip-price">₹${s.price}</span></span>`)
             .join('');
 
         serviceSummaryTotal.innerHTML = `Total: <strong>₹${total}</strong>`;
@@ -300,7 +312,7 @@ document.addEventListener('DOMContentLoaded', () => {
             name,
             phone,
             gender: selectedGender,
-            services: selectedServices.map(s => ({ id: s.id, name: s.name, price: s.price, icon: s.icon })),
+            services: selectedServices.map(s => ({ id: s.id, name: s.name, price: s.price })),
             date: selectedDate,
             timeSlot: selectedSlot,
             notes,
@@ -324,7 +336,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const dayInfo = SalonData.getNextDays(3).find(d => d.date === appt.date);
         const dateLabel = dayInfo ? `${dayInfo.dayName}, ${dayInfo.dayNum} ${dayInfo.monthName}` : appt.date;
 
-        const serviceNames = (appt.services || []).map(s => `${s.icon || '✂️'} ${s.name}`).join(', ');
+        const serviceNames = (appt.services || []).map(s => s.name).join(', ');
         const total = appt.totalAmount || 0;
 
         confirmationScreen.innerHTML = `
